@@ -43,7 +43,8 @@ if uploaded_file is not None:
                 prompt = f"قم بالاستماع إلى هذا الملف الصوتي/الفيديو، واكتب تفريغاً للنص مع توقيتات زمنية تقريبية، ثم قم بترجمته إلى اللغة {target_lang}. أعطني النتيجة بصيغة ملف ترجمة SRT دقيقة ومرتبة."
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash'
+                    ,
                     contents=[uploaded_file_gemini, prompt]
                 )
 
