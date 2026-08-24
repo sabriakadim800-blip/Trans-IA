@@ -52,10 +52,16 @@ if uploaded_file is not None:
             
             # حذف الملف من خوادم جيميناي بعد الانتهاء
             client.files.delete(name=uploaded_file_gemini.name)
-
             st.success("تمت المعالجة بنجاح!")
             
             srt_content = response.text
+
+            # --- تنظيف الرموز الزائدة لضمان توافق ملف الـ SRT ---
+            import re
+            # إزالة علامات الماركداون البرمجية إن وجدت في البداية أو النهاية
+            srt_content = re.sub(r'^```[a-zA-Z]*\n', '', srt_content.strip())
+            srt_content = re.sub(r'\n```$', '', srt_content.strip())
+            # --------------------------------------------------
 
             st.subheader("نتيجة الترجمة والملف (SRT):")
             st.text_area("الكود الناتج", srt_content, height=300)
@@ -67,5 +73,4 @@ if uploaded_file is not None:
                 mime="text/plain"
             )
 
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء المعالجة: {e}")
+            
