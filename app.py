@@ -1,88 +1,63 @@
 import streamlit as st
-import openai
 import os
 from tempfile import NamedTemporaryFile
+from google import genai
 
-# إعداد مفتاح API
-if "OPENAI_API_KEY" in st.secrets:
-    api_key = st.secrets["OPENAI_API_KEY"]
+# إعداد مفتاح Gemini API
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
 else:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    st.error("الرجاء إضافة مفتاح OpenAI API في إعدادات Secrets لموقع Streamlit.")
+    st.error("الرجاء إضافة مفتاح GEMINI_API_KEY في إعدادات Secrets لموقع Streamlit.")
     st.stop()
 
-client = openai.OpenAI(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
-st.title("🎬 أداة ترجمة ودبلجة الفيديوهات")
-st.write("قم بتنزيل ملف فيديو أو صوت، وسقوم بتفريغه وترجمته باحترافية.")
+st.title("🎬 أداة ترجمة وتحليل الفيديوهات بالذكاء الاصطناعي")
+st.write("قم برفع ملف الفيديو أو الصوت، وسقوم بترجمته ومعالجته مجاناً عبر Gemini.")
 
 uploaded_file = st.file_uploader("اختر ملف فيديو أو صوت", type=["mp3", "mp4", "wav", "m4a", "mov"])
 
 target_lang = st.selectbox(
     "اختر اللغة المستهدفة للترجمة:",
-    ["العربية (Arabic)", "الإنجليزية (English)", "التركية (Turkish)", "Original"]
+    ["العربية (Arabic)", "الإنجليزية (English)", "التركية (Turkish)"]
 )
 
 if uploaded_file is not None:
     st.video(uploaded_file)
     
-    if st.button("بدء التفريغ والترجمة"):
-        with st.spinner("جاري رفع الملف ومعالجته..."):
+    if st.button("بدء المعالجة والترجمة"):
+        with st.spinner("جاري رفع الملف ومعالجته بواسطة Gemini..."):
             with NamedTemporaryFile(delete=False, suffix='.' + uploaded_file.name.split('.')[-1]) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
         try:
-            with st.spinner("جاري تفريغ الصوت وتحويله إلى نص..."):
-                with open(tmp_path, "rb") as audio_file:
-                    transcript = client.audio.transcriptions.create(
-                        model="whisper-1",
-                        file=audio_file,
-                        response_format="verbose_json"
-                    )
+            with st.spinner("جاري رفع الملف إلى خوادم الذكاء الاصطناعي وتحليله..."):
+                # رفع الملف باستخدام واجهة الملفات الخاصة بـ Gemini
+                uploaded_file_gemini = client.files.upload(file=tmp_path)
+                
+            with st.spinner("جاري استخراج الترجمة وتوليد الملف..."):
+                prompt = f"قم بالاستماع إلى هذا الملف الصوتي/الفيديو، واكتب تفريغاً للنص مع توقيتات زمنية تقريبية، ثم قم بترجمته إلى اللغة {target_lang}. أعطني النتيجة بصيغة ملف ترجمة SRT دقيقة ومرتبة."
+                
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[uploaded_file_gemini, prompt]
+                )
 
             os.unlink(tmp_path)
-            st.success("تم تفريغ الصوت بنجاح! جاري ترجمة النصوص...")
+            
+            # حذف الملف من خوادم جيميناي بعد الانتهاء
+            client.files.delete(name=uploaded_file_gemini.name)
 
-            segments = getattr(transcript, 'segments', [])
-            srt_content = ""
-            translated_segments = []
+            st.success("تمت المعالجة بنجاح!")
+            
+            srt_content = response.text
 
-            for i, seg in enumerate(segments):
-                start = seg.get('start', 0)
-                end = seg.get('end', 0)
-                text = seg.get('text', '').strip()
-
-                if target_lang != "Original":
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": f"You are a professional translator for video subtitles. Translate the following text to {target_lang}. Return only the translated text without extra notes."},
-                            {"role": "user", "content": text}
-                        ]
-                    )
-                    translated_text = response.choices[0].message.content.strip()
-                else:
-                    translated_text = text
-
-                translated_segments.append((start, end, translated_text))
-
-            def format_time(seconds):
-                hours = int(seconds // 3600)
-                minutes = int((seconds % 3600) // 60)
-                secs = int(seconds % 60)
-                milliseconds = int((seconds - int(seconds)) * 1000)
-                return f"{hours:02d}:{minutes:02d}:{secs:02d},{milliseconds:03d}"
-
-            for i, (start, end, text) in enumerate(translated_segments, start=1):
-                start_str = format_time(start)
-                end_str = format_time(end)
-                srt_content += f"{i}\n{start_str} --> {end_str}\n{text}\n\n"
-
-            st.subheader("النص المترجم (SRT):")
-            st.text_area("نتيجة الترجمة", srt_content, height=300)
+            st.subheader("نتيجة الترجمة والملف (SRT):")
+            st.text_area("الكود الناتج", srt_content, height=300)
 
             st.download_button(
                 label="تحميل ملف الترجمة (SRT)",
