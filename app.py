@@ -39,7 +39,7 @@ if uploaded_file is not None:
                 # رفع الملف باستخدام واجهة الملفات الخاصة بـ Gemini
                 uploaded_file_gemini = client.files.upload(file=tmp_path)
                 
-            try:
+        try:
             with st.spinner("جاري استخراج الترجمة وتوليد الملف..."):
                 prompt = f"قم بالاستماع إلى هذا الملف الصوتي/الفيديو، واكتب تفريغاً للنص مع توقيتات زمنية تقريبية، ثم قم بترجمته إلى اللغة {target_lang}. أعطني النتيجة بصيغة ملف ترجمة SRT دقيقة ومرتبة."
                 
@@ -74,3 +74,4 @@ if uploaded_file is not None:
 
         except Exception as e:
             st.error(f"حدث خطأ أثناء المعالجة: {e}")
+            
