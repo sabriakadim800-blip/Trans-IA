@@ -43,8 +43,18 @@ jobs:
       - name: Grant Execute Permission to Gradlew
         run: chmod +x android/gradlew
 
-      - name: Ensure Android Variables File Exists
+      - name: Ensure Android Settings and Variables Files Exist
         run: |
+          if [ ! -f android/settings.gradle ]; then
+            echo "Creating fallback android/settings.gradle..."
+            cat << 'EOF' > android/settings.gradle
+          include ':app'
+          include ':capacitor-cordova-android-plugins'
+          project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
+
+          apply from: 'capacitor.settings.gradle'
+          EOF
+          fi
           if [ ! -f android/variables.gradle ]; then
             echo "Creating fallback android/variables.gradle..."
             cat << 'EOF' > android/variables.gradle
