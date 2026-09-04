@@ -1,0 +1,8 @@
+{
+  "name": "VidTrans IA",
+  "description": "توليد ومراجعة وتعديل ملفات الترجمة (SRT) بالذكاء الاصطناعي للفيديوهات والملفات الصوتية",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
